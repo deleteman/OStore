@@ -5,50 +5,46 @@
 var fs = require('fs');
 var spawn = require('child_process').spawn;
 var path = require('path');
+var assert = require("assert");
+var color = require("colors");
 
 function runTest(test, cb) {
-	var proc = spawn(process.execPath, [path.join('test', test)], {env: {NODE_PATH: __dirname}});
-	proc.stdout.setEncoding('utf8');
-	proc.stderr.setEncoding('utf8');
+  var testPath = path.join(__dirname, 'test', test);
 
-	var stdout = '', stderr = '';
-	proc.stdout.on('data', function(data) {
-		stdout += data;
-	});
-	proc.stderr.on('data', function(data) {
-		stderr += data;
-	});
-	proc.stdin.end();
+  var testCases = require(testPath);
+  console.log("-- " + testPath);
+  for(var testCase in testCases) { 
+    var passes = true;
+    try {
+      testCases[testCase](assert);
+    } catch (ex) {
+      passes = false; 
+      console.log("    ------------------- Error ---------------".red);
+      console.log("    " + ex.message.red);
+      console.log("    ------------------- /Error ---------------".red);
+    }
+    console.log("    # " + testCase + ": " + (passes? "Pass".green : "Fail".red ));
+  }
+cb();
 
-	proc.on('exit', function(code) {
-		if ((stdout !== 'pass\n' && stdout !== '') || stderr !== '') {
-			return cb(new Error(
-					'Test `'+ test+ '` failed.\n'+
-					'code: '+ code+ '\n'+
-					'stderr: '+ stderr+ '\n'+
-					'stdout: '+ stdout));
-		}
-		console.log(test+ ': '+ 'pass');
-		cb();
-	});
 }
 
 var cb = function(err) {
-	if (err) {
-		console.error(String(err));
-		process.exit(1);
-	}
+  if (err) {
+    console.error(String(err));
+    process.exit(1);
+  }
 };
 fs.readdirSync('./test').reverse().forEach(function(file) {
     var stats = fs.lstatSync(path.join('./test',file));
-    if (!stats.isFile())
-		return;
-	
-	cb = new function(cb, file) {
-		return function(err) {
-			if (err) return cb(err);
-			runTest(file, cb);
-		};
-	}(cb, file);
+    if (!stats.isFile() || !file.match(/\.js$/)) //ignore tmp files and what not 
+      return;
+  
+  cb = new function(cb, file) {
+    return function(err) {
+      if (err) return cb(err);
+      runTest(file, cb);
+    };
+  }(cb, file);
 });
 cb();

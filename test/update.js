@@ -9,7 +9,7 @@ exports['update age'] = function (test) {
     store.update(1, { age: 801 });
 
     var result = store.get(1);
-    assert.ok(result);
-    assert.equal(result.name, 'Adam');
-    assert.equal(result.age, 801);
+    test.ok(result);
+    test.equal(result.name, 'Adam');
+    test.equal(result.age, 801);
 }
